@@ -1,0 +1,10 @@
+import importlib, sys
+sys.path.insert(0, "/mnt/data")
+sc = importlib.import_module("smartcalc.api")
+print("2+2*2 =", sc.eval_expr("2+2*2"))
+print("(10-3)**2//4 =", sc.eval_expr("(10-3)**2//4"))
+print("2**3**2 =", sc.eval_expr("2**3**2"))
+print("-3**2 =", sc.eval_expr("-3**2"))
+print("(-3)**2 =", sc.eval_expr("(-3)**2"))
+print("pi =", sc.eval_expr("pi"))
+print("2*pi + tau/2 =", sc.eval_expr("2*pi + tau/2"))
