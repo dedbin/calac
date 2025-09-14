@@ -3,10 +3,11 @@ from typing import List
 from .tokens import Token, K_NUM, K_IDENT, K_OP, K_LP, K_RP, K_EOF
 from .astnodes import AST, Num, Const, Unary, Binary
 from .precedence import INFIX_BP, PREFIX_BP
-from .errors import ParseError
+from .errors import ParseError, make_caret_message
 
 class Parser:
-    def __init__(self, tokens: List[Token]):
+    def __init__(self, text: str, tokens: List[Token]):
+        self.text = text
         self.tokens = tokens
         self.i = 0
 
@@ -23,7 +24,9 @@ class Parser:
         tok = self.peek()
         if tok.kind != kind or (value is not None and tok.value != value):
             expected = f"{kind}('{value}')" if value is not None else kind
-            raise ParseError(f"Ожидается {expected}, найдено {tok.kind}('{tok.value}') на позиции {tok.pos}")
+            raise ParseError(make_caret_message(
+                f"Ожидается {expected}, найдено {tok.kind}('{tok.value}')", self.text, tok.pos
+            ))
         self.advance()
         return tok
 
@@ -31,7 +34,9 @@ class Parser:
         expr = self.parse_expr(0)
         if self.peek().kind != K_EOF:
             tok = self.peek()
-            raise ParseError(f"Лишний ввод начиная с позиции {tok.pos}: '{tok.value}'")
+            raise ParseError(make_caret_message(
+                f"Лишний ввод начиная с позиции {tok.pos}: '{tok.value}'", self.text, tok.pos
+            ))
         return expr
 
     def parse_expr(self, min_bp: int) -> AST:
@@ -52,7 +57,9 @@ class Parser:
             left = self.parse_expr(0)
             self.expect(K_RP)
         else:
-            raise ParseError(f"Неожиданный токен {tok.kind}('{tok.value}') на позиции {tok.pos}")
+            raise ParseError(make_caret_message(
+                f"Неожиданный токен {tok.kind}('{tok.value}')", self.text, tok.pos
+            ))
 
         # led
         while True:

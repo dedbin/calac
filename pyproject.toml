@@ -5,6 +5,9 @@ description = "Safe expression parser/evaluator with lexer+Pratt parser"
 readme = "README.md"
 requires-python = ">=3.9"
 
+[project.scripts]
+smartcalc = "smartcalc.cli:main"
+
 [build-system]
 requires = ["setuptools>=61"]
 build-backend = "setuptools.build_meta"

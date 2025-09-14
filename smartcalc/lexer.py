@@ -1,7 +1,7 @@
 from __future__ import annotations
 from typing import List
 from .tokens import Token, K_NUM, K_IDENT, K_OP, K_LP, K_RP, K_EOF
-from .errors import LexError
+from .errors import LexError, make_caret_message
 
 class Lexer:
     def __init__(self, text: str):
@@ -67,7 +67,9 @@ class Lexer:
                 val = float(cleaned)
                 return Token(K_NUM, val, pos)
             except Exception:
-                raise LexError(f"Некорректное число '{lexeme}' на позиции {pos}")
+                 raise LexError(make_caret_message(
+                    f"Некорректное число '{lexeme}'", self.text, pos
+                ))
 
     def lex_ident(self) -> Token:
         start = self.i
@@ -111,7 +113,9 @@ class Lexer:
             return Token(K_OP, ch, pos)
 
         bad = self.advance()
-        raise LexError(f"Неожиданный символ '{bad}' на позиции {pos}")
+        raise LexError(make_caret_message(
+            f"Неожиданный символ '{bad}'", self.text, pos
+        ))
 
     def tokenize(self) -> List[Token]:
         out = []

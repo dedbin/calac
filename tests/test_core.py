@@ -1,31 +1,93 @@
 import math
-from smartcalc.api import eval_expr
+import pytest
 
-def as_int_if_possible(x):
-    return int(x) if isinstance(x, float) and x.is_integer() else x
+from smartcalc.api import eval_expr, parse
+from smartcalc.errors import SmartCalcError
 
-def test_basic_arith():
-    assert as_int_if_possible(eval_expr('2+2*2')) == 6
-    assert as_int_if_possible(eval_expr('(2+2)*2')) == 8
+
+def test_add_mul_priority():
+    assert eval_expr('2+2*2') == 6
+
+
+def test_parentheses_priority():
+    assert eval_expr('(2+2)*2') == 8
+
+
+def test_division():
     assert eval_expr('10/4') == 2.5
-    assert as_int_if_possible(eval_expr('7//3')) == 2
-    assert as_int_if_possible(eval_expr('10%4')) == 2
 
-def test_power_and_unary():
-    assert as_int_if_possible(eval_expr('2**3**2')) == 512   # правоассоциативно
-    assert as_int_if_possible(eval_expr('-3**2')) == -9      # ** сильнее унарного -
-    assert as_int_if_possible(eval_expr('(-3)**2')) == 9
 
-def test_constants():
-    assert eval_expr('pi') == math.pi
-    assert as_int_if_possible(eval_expr('2*pi + tau/2')) == 2*math.pi + math.tau/2
+def test_floor_division():
+    assert eval_expr('7//3') == 2
 
-def test_paren_nesting():
-    assert as_int_if_possible(eval_expr('2*(3+(4-1))')) == 12
 
-def test_zero_division():
-    try:
-        eval_expr('1/0')
-        assert False, 'must raise'
-    except ZeroDivisionError:
-        pass
+def test_modulo():
+    assert eval_expr('10%4') == 2
+
+
+def test_power_right_assoc():
+    assert eval_expr('2**3**2') == 512
+
+
+def test_power_unary():
+    assert eval_expr('-3**2') == -9
+
+
+def test_power_unary_paren():
+    assert eval_expr('(-3)**2') == 9
+
+
+def test_constant_pi():
+    assert eval_expr('pi') == pytest.approx(math.pi)
+
+
+def test_constants_mix():
+    expr = '2*pi + tau/2'
+    assert eval_expr(expr) == pytest.approx(2 * math.pi + math.tau / 2)
+
+
+def test_nested_parentheses():
+    assert eval_expr('2*(3+(4-1))') == 12
+
+
+def test_number_formats():
+    assert eval_expr('1_000 + 2_000') == 3000
+    assert eval_expr('1e-3 + .5') == pytest.approx(0.501)
+
+
+def test_mixed_precedence1():
+    assert eval_expr('2 + 3*4 - 5') == 9
+
+
+def test_mixed_precedence2():
+    assert eval_expr('2*3 + 4//2') == 8
+
+
+@pytest.mark.parametrize('expr', ['1/0', '1//0', '1%0'])
+def test_zero_division(expr):
+    with pytest.raises(ZeroDivisionError):
+        eval_expr(expr)
+
+
+def test_error_unknown_symbol():
+    with pytest.raises(SmartCalcError) as e:
+        parse('2 + @ 3')
+    msg = str(e.value)
+    assert '@' in msg and '^' in msg
+
+
+def test_error_unclosed_parenthesis():
+    with pytest.raises(SmartCalcError) as e:
+        parse('(2+3')
+    assert '^' in str(e.value)
+
+
+def test_error_extra_input():
+    with pytest.raises(SmartCalcError) as e:
+        parse('2+2 2')
+    assert '^' in str(e.value)
+
+
+def test_empty_input():
+    with pytest.raises(SmartCalcError):
+        parse('')
