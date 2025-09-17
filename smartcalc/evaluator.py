@@ -1,6 +1,8 @@
 from __future__ import annotations
 from typing import Union, Optional, Dict
 import math
+
+import numpy as np
 from .astnodes import AST, Num, Const, Call, Unary, Binary
 from .errors import NameResolutionError, EvalError
 from .constants import DEFAULT_CONSTANTS
@@ -12,9 +14,9 @@ SAFE_FUNCS = {
     'max': ('2+', max),
     'min': ('2+', min),
     'round': ((1, 2), round),
-    'sin': (1, math.sin),
-    'cos': (1, math.cos),
-    'sqrt': (1, math.sqrt),
+    'sin': (1, lambda x: round(np.sin(x), 5)),
+    'cos': (1, lambda x: round(np.cos(x), 5)),
+    'sqrt': (1, np.sqrt),
     'log': ((1, 2), lambda *xs: math.log(*xs)),
 }
 
