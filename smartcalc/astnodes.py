@@ -15,6 +15,12 @@ class Const(AST):
     pos: int
 
 @dataclass
+class Call(AST):
+    func: str
+    args: list[AST]
+    pos: int
+
+@dataclass
 class Unary(AST):
     op: str
     expr: AST

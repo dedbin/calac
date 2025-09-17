@@ -1,7 +1,7 @@
 from __future__ import annotations
 from typing import List
-from .tokens import Token, K_NUM, K_IDENT, K_OP, K_LP, K_RP, K_EOF
-from .astnodes import AST, Num, Const, Unary, Binary
+from .tokens import Token, K_NUM, K_IDENT, K_OP, K_LP, K_RP, K_COMMA, K_EOF
+from .astnodes import AST, Num, Const, Call, Unary, Binary
 from .precedence import INFIX_BP, PREFIX_BP
 from .errors import ParseError, make_caret_message
 
@@ -47,7 +47,21 @@ class Parser:
             left: AST = Num(tok.value, tok.pos)
         elif tok.kind == K_IDENT:
             self.advance()
-            left = Const(str(tok.value), tok.pos)
+            name = str(tok.value)
+            if self.peek().kind == K_LP:
+                self.advance()
+                args = []
+                if self.peek().kind != K_RP:
+                    while True:
+                        args.append(self.parse_expr(0))
+                        if self.peek().kind == K_COMMA:
+                            self.advance()
+                        else:
+                            break
+                self.expect(K_RP)
+                left = Call(name, args, tok.pos)
+            else:
+                left = Const(name, tok.pos)
         elif tok.kind == K_OP and tok.value in ('+', '-'):
             op_tok = self.advance()
             right = self.parse_expr(PREFIX_BP)

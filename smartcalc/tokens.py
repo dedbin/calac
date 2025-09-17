@@ -6,6 +6,7 @@ K_IDENT = 'IDENT'
 K_OP    = 'OP'
 K_LP    = 'LPAREN'
 K_RP    = 'RPAREN'
+K_COMMA = 'COMMA'
 K_EOF   = 'EOF'
 
 @dataclass(frozen=True)

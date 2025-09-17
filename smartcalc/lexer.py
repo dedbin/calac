@@ -1,6 +1,6 @@
 from __future__ import annotations
 from typing import List
-from .tokens import Token, K_NUM, K_IDENT, K_OP, K_LP, K_RP, K_EOF
+from .tokens import Token, K_NUM, K_IDENT, K_OP, K_LP, K_RP, K_COMMA, K_EOF
 from .errors import LexError, make_caret_message
 
 class Lexer:
@@ -95,13 +95,16 @@ class Lexer:
         if ch.isalpha() or ch == '_':
             return self.lex_ident()
 
-        # скобки
+        # скобки и запятая
         if ch == '(':
             self.advance()
             return Token(K_LP, '(', pos)
         if ch == ')':
             self.advance()
             return Token(K_RP, ')', pos)
+        if ch == ',':
+            self.advance()
+            return Token(K_COMMA, ',', pos)
 
         # операторы (двухсимвольные сначала)
         two = self.text[self.i:self.i+2]
