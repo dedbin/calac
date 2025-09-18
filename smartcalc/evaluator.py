@@ -16,14 +16,14 @@ SAFE_FUNCS = {
     'round': ((1, 2), round),
     'sin': (1, lambda x: round(np.sin(x), ROUND_CONST)),
     'cos': (1, lambda x: round(np.cos(x), ROUND_CONST)),
-    'sqrt': (1, np.sqrt),
+    'sqrt': (1, math.sqrt),
     'log': ((1, 2), lambda *xs: math.log(*xs)),
     'sinh': (1, lambda x: round(np.sinh(x), ROUND_CONST)),
     'cosh': (1, lambda x: round(np.cosh(x), ROUND_CONST)),
     'tanh': (1, lambda x: round(np.tanh(x), ROUND_CONST)),
-    'asin': (1, np.arcsin),  # TODO: asin(2) = nan, consider raising a friendlier error
-    'acos': (1, np.arccos),
-    'atan': (1, np.arctan),
+    'asin': (1, math.asin),
+    'acos': (1, math.acos),
+    'atan': (1, math.atan),
 }
 
 PROTECTED_NAMES = frozenset({name.lower() for name in DEFAULT_CONSTANTS} | set(SAFE_FUNCS.keys()))
@@ -96,6 +96,16 @@ class Evaluator:
                 min_a, max_a = spec
                 if not (min_a <= n <= max_a):
                     raise EvalError(f"Функция '{node.func}' ожидает от {min_a} до {max_a} аргумент(ов), но получила {n} (позиция {node.pos})")
-            return func(*args)
+            try:
+                result = func(*args)
+            except ValueError:
+                raise EvalError(
+                    f"Аргументы функции '{node.func}' выходят за допустимую область определения (позиция {node.pos})"
+                ) from None
+            if isinstance(result, (float, np.floating)) and math.isnan(float(result)):
+                raise EvalError(
+                    f"Вычисление функции '{node.func}' привело к неопределённому значению (позиция {node.pos})"
+                )
+            return result
         raise EvalError('Неизвестный узел AST')
 

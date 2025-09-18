@@ -69,3 +69,20 @@ def test_acos_function():
 
 def test_atan_function():
     assert eval_expr('atan(-1)') == pytest.approx(-0.7853981633974483)
+
+
+
+def test_asin_out_of_domain_error():
+    with pytest.raises(EvalError, match="Аргументы функции 'asin' выходят за допустимую область определения"):
+        eval_expr('asin(2)')
+
+
+def test_sqrt_negative_error():
+    with pytest.raises(EvalError, match="Аргументы функции 'sqrt' выходят за допустимую область определения"):
+        eval_expr('sqrt(-1)')
+
+
+def test_sin_nan_result_error():
+    with pytest.warns(RuntimeWarning):
+        with pytest.raises(EvalError, match="Вычисление функции 'sin' привело к неопределённому значению"):
+            eval_expr('sin(1e309)')
