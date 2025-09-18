@@ -18,6 +18,12 @@ SAFE_FUNCS = {
     'cos': (1, lambda x: round(np.cos(x), 5)),
     'sqrt': (1, np.sqrt),
     'log': ((1, 2), lambda *xs: math.log(*xs)),
+    'sinh': (1, lambda x: round(np.sinh(x), 5)),
+    'cosh': (1, lambda x: round(np.cosh(x), 5)),
+    'tanh': (1, lambda x: round(np.tanh(x), 5)),
+    'asin': (1, np.arcsin),
+    'acos': (1, np.arccos),
+    'atan': (1, np.arctan),
 }
 
 class Evaluator:

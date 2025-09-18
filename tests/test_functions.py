@@ -51,3 +51,21 @@ def test_error_range_args():
 def test_unknown_function():
     with pytest.raises(NameResolutionError):
         eval_expr('foo(1)')
+
+def test_sinh_function():
+    assert eval_expr('sinh(1)') == pytest.approx(1.1752)
+
+def test_cosh_function():
+    assert eval_expr('cosh(1)') == pytest.approx(1.54308)
+
+def test_tanh_function():
+    assert eval_expr('tanh(1)') == pytest.approx(0.76159)
+
+def test_asin_function():
+    assert eval_expr('asin(-1)') == pytest.approx(-1.5707963267948966)
+
+def test_acos_function():
+    assert eval_expr('acos(-1)') == pytest.approx(3.141592653589793)
+
+def test_atan_function():
+    assert eval_expr('atan(-1)') == pytest.approx(-0.7853981633974483)
