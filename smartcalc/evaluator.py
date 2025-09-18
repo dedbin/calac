@@ -5,7 +5,7 @@ import math
 import numpy as np
 from .astnodes import AST, Num, Const, Call, Unary, Binary
 from .errors import NameResolutionError, EvalError
-from .constants import DEFAULT_CONSTANTS
+from .constants import DEFAULT_CONSTANTS, ROUND_CONST
 
 Number = Union[int, float]
 
@@ -14,14 +14,14 @@ SAFE_FUNCS = {
     'max': ('2+', max),
     'min': ('2+', min),
     'round': ((1, 2), round),
-    'sin': (1, lambda x: round(np.sin(x), 5)),
-    'cos': (1, lambda x: round(np.cos(x), 5)),
+    'sin': (1, lambda x: round(np.sin(x), ROUND_CONST)),
+    'cos': (1, lambda x: round(np.cos(x), ROUND_CONST)),
     'sqrt': (1, np.sqrt),
     'log': ((1, 2), lambda *xs: math.log(*xs)),
-    'sinh': (1, lambda x: round(np.sinh(x), 5)),
-    'cosh': (1, lambda x: round(np.cosh(x), 5)),
-    'tanh': (1, lambda x: round(np.tanh(x), 5)),
-    'asin': (1, np.arcsin),
+    'sinh': (1, lambda x: round(np.sinh(x), ROUND_CONST)),
+    'cosh': (1, lambda x: round(np.cosh(x), ROUND_CONST)),
+    'tanh': (1, lambda x: round(np.tanh(x), ROUND_CONST)),
+    'asin': (1, np.arcsin), #TODO: asin(2) = nan, надо raise ошибку выполнения
     'acos': (1, np.arccos),
     'atan': (1, np.arctan),
 }

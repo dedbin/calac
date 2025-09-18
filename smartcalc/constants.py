@@ -5,3 +5,4 @@ DEFAULT_CONSTANTS = {
     'tau': math.tau,
     'phi': (1 + math.sqrt(5.0)) / 2,
 }
+ROUND_CONST = 5
