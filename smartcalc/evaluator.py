@@ -3,7 +3,7 @@ from typing import Union, Optional, Dict
 import math
 
 import numpy as np
-from .astnodes import AST, Num, Const, Call, Unary, Binary
+from .astnodes import AST, Num, Const, Call, Unary, Binary, Assign
 from .errors import NameResolutionError, EvalError
 from .constants import DEFAULT_CONSTANTS, ROUND_CONST
 
@@ -21,10 +21,13 @@ SAFE_FUNCS = {
     'sinh': (1, lambda x: round(np.sinh(x), ROUND_CONST)),
     'cosh': (1, lambda x: round(np.cosh(x), ROUND_CONST)),
     'tanh': (1, lambda x: round(np.tanh(x), ROUND_CONST)),
-    'asin': (1, np.arcsin), #TODO: asin(2) = nan, надо raise ошибку выполнения
+    'asin': (1, np.arcsin),  # TODO: asin(2) = nan, consider raising a friendlier error
     'acos': (1, np.arccos),
     'atan': (1, np.arctan),
 }
+
+PROTECTED_NAMES = frozenset({name.lower() for name in DEFAULT_CONSTANTS} | set(SAFE_FUNCS.keys()))
+
 
 class Evaluator:
     def __init__(self, constants: Optional[Dict[str, Number]] = None):
@@ -32,19 +35,29 @@ class Evaluator:
         if constants:
             for k, v in constants.items():
                 self.constants[k.lower()] = v
+        self.variables: Dict[str, Number] = {}
 
     def eval(self, node: AST) -> Number:
         if isinstance(node, Num):
             return node.value
+        if isinstance(node, Assign):
+            name = node.name.lower()
+            if name in PROTECTED_NAMES:
+                raise EvalError(f"Нельзя изменять значение константы '{node.name}' так как она защищена (позиция {node.pos})")
+            value = self.eval(node.expr)
+            self.variables[name] = value
+            return value
         if isinstance(node, Const):
             name = node.name.lower()
+            if name in self.variables:
+                return self.variables[name]
             if name not in self.constants:
-                raise NameResolutionError(f"Константа '{node.name}' не определена (позиция {node.pos})")
+                raise NameResolutionError(f"Константа или переменная'{node.name}' не определена (позиция {node.pos})")
             return self.constants[name]
         if isinstance(node, Unary):
             val = self.eval(node.expr)
             if node.op == '+':
-                return +val
+                return +val 
             if node.op == '-':
                 return -val
             raise EvalError(f"Неизвестный унарный оператор '{node.op}' (позиция {node.pos})")
@@ -52,14 +65,14 @@ class Evaluator:
             left = self.eval(node.left)
             right = self.eval(node.right)
             op = node.op
-            if op == '+':  return left + right
-            if op == '-':  return left - right
-            if op == '*':  return left * right
-            if op == '/':  return left / right
+            if op == '+': return left + right
+            if op == '-': return left - right
+            if op == '*': return left * right
+            if op == '/': return left / right
             if op == '//': return left // right
-            if op == '%':  return left % right
+            if op == '%': return left % right
             if op == '**': return left ** right
-            raise EvalError(f"Неизвестный оператор '{op}' (позиция {node.pos})")
+            raise EvalError(f"Неизвестный бинарный оператор '{op}' (позиция {node.pos})")
         if isinstance(node, Call):
             name = node.func.lower()
             if name not in SAFE_FUNCS:
@@ -68,24 +81,21 @@ class Evaluator:
             args = [self.eval(arg) for arg in node.args]
             for a in args:
                 if not isinstance(a, (int, float)):
-                    raise EvalError(f"Аргументы функции должны быть числами (позиция {node.pos})")
+                    raise EvalError(f"Функция '{node.func}' ожидает числовые аргументы (позиция {node.pos})")
             n = len(args)
             if isinstance(spec, int):
                 if n != spec:
-                    raise EvalError(
-                        f"Функция '{node.func}' требует {spec} аргумент(ов), получено {n} (позиция {node.pos})"
-                    )
+                    raise EvalError(f"Функция '{node.func}' ожидает {spec} аргумент(ов), но получила {n} (позиция {node.pos})")
             elif isinstance(spec, str) and spec.endswith('+'):
                 min_args = int(spec[:-1])
                 if n < min_args:
                     raise EvalError(
-                        f"Функция '{node.func}' требует не менее {min_args} аргумент(ов), получено {n} (позиция {node.pos})"
+                        f"Функция '{node.func}' ожидает как минимум {min_args} аргумент(ов), но получила {n} (позиция {node.pos})"
                     )
             elif isinstance(spec, tuple) and len(spec) == 2 and all(isinstance(x, int) for x in spec):
                 min_a, max_a = spec
                 if not (min_a <= n <= max_a):
-                    raise EvalError(
-                        f"Функция '{node.func}' требует от {min_a} до {max_a} аргумент(ов), получено {n} (позиция {node.pos})"
-                    )
+                    raise EvalError(f"Функция '{node.func}' ожидает от {min_a} до {max_a} аргумент(ов), но получила {n} (позиция {node.pos})")
             return func(*args)
-        raise EvalError("Неизвестный узел AST")
+        raise EvalError('Неизвестный узел AST')
+

@@ -2,7 +2,8 @@ import math
 import pytest
 
 from smartcalc.api import eval_expr, parse
-from smartcalc.errors import SmartCalcError
+from smartcalc.evaluator import Evaluator
+from smartcalc.errors import SmartCalcError, EvalError
 
 
 def test_add_mul_priority():
@@ -91,3 +92,17 @@ def test_error_extra_input():
 def test_empty_input():
     with pytest.raises(SmartCalcError):
         parse('')
+
+def test_assignment_persists_with_reassignment():
+    ev = Evaluator()
+    assert ev.eval(parse('x = 10')) == 10
+    assert ev.eval(parse('x + 5')) == 15
+    assert ev.eval(parse('x = x + 1')) == 11
+    assert ev.eval(parse('X')) == 11
+
+
+@pytest.mark.parametrize('expr', ['pi = 3', 'sin = 1'])
+def test_assignment_protected_names(expr):
+    ev = Evaluator()
+    with pytest.raises(EvalError):
+        ev.eval(parse(expr))
