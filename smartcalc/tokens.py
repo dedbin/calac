@@ -9,6 +9,10 @@ K_LP    = 'LPAREN'
 K_RP    = 'RPAREN'
 K_COMMA = 'COMMA'
 K_EOF   = 'EOF'
+K_PLOT  = 'PLOT'
+K_FROM  = 'FROM'
+K_TO    = 'TO'
+K_TARGET = 'TARGET'
 
 @dataclass(frozen=True)
 class Token:

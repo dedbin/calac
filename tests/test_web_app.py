@@ -37,10 +37,10 @@ def test_on_submit_evaluates_expression_and_logs_history():
     history_entry = updated_runtime["history"][0]
     assert history_entry["expression"] == "2 + 3"
     assert history_entry["result"] == "5"
-    assert history_entry["status"] == "Success"
-    assert history_entry["origin"] == "Manual"
+    assert history_entry["status"] == "Успех"
+    assert history_entry["origin"] == "Вручную"
     assert "\x1b" not in history_entry["status"]
-    assert rows[0][5] == "Manual"
+    assert rows[0][5] == "Вручную"
 
 
 def test_on_submit_records_errors_without_escape_codes():
@@ -48,12 +48,12 @@ def test_on_submit_records_errors_without_escape_codes():
 
     message, runtime, rows, returned_expr = app._on_submit("7=8", runtime)
 
-    assert "Error while evaluating" in message
+    assert "Ошибка при вычислении" in message
     assert "\x1b" not in message
     entry = runtime["history"][0]
-    assert entry["status"].startswith("Error:")
+    assert entry["status"].startswith("Ошибка:")
     assert "\x1b" not in entry["status"]
-    assert rows[0][4].startswith("Error:")
+    assert rows[0][4].startswith("Ошибка:")
 
 
 def test_history_select_replays_expression_with_existing_state_once():
@@ -67,8 +67,8 @@ def test_history_select_replays_expression_with_existing_state_once():
 
     assert expr == "a * 2"
     assert "**10**" in message
-    assert rows[0][4] == "Replayed"
-    assert rows[0][5] == "Replay"
+    assert rows[0][4] == "Повтор"
+    assert rows[0][5] == "Повтор"
 
     snapshot = deepcopy(runtime["history"])
     message_again, runtime, rows_again, expr_again = app._on_history_select(DummySelectEvent(0), runtime)
@@ -102,7 +102,7 @@ def test_clear_resets_runtime_state():
 
     message, cleared_runtime, rows, expr = app._on_clear(runtime)
 
-    assert message.startswith("History cleared")
+    assert message.startswith("История очищена")
     assert cleared_runtime is not runtime
     assert cleared_runtime["history"] == []
     assert cleared_runtime["next_entry_id"] == 1

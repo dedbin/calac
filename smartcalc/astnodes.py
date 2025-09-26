@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Union
+from typing import Union, Optional
 
 
 class AST:
@@ -44,4 +44,22 @@ class Binary(AST):
 class Assign(AST):
     name: str
     expr: AST
+    pos: int
+
+
+@dataclass
+class PlotTarget(AST):
+    format: str
+    path: Optional[str]
+    pos: int
+
+
+@dataclass
+class PlotCommand(AST):
+    expr: AST
+    variable: Optional[str]
+    label: Optional[str]
+    domain_start: Optional[AST]
+    domain_end: Optional[AST]
+    target: Optional[PlotTarget]
     pos: int

@@ -1,23 +1,35 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import math
 import numbers
+import re
 from datetime import datetime
 from typing import Any, Dict, List, Tuple
 
 import gradio as gr
 
 from smartcalc import api
+from smartcalc.astnodes import PlotCommand
 from smartcalc.evaluator import Evaluator
+from smartcalc.errors import EvalError, SmartCalcError
 
 HistoryEntry = Dict[str, Any]
 RuntimeState = Dict[str, Any]
 
 
+_ANSI_RE = re.compile(r"\x1b\[[0-9;]*m")
+
+
+def _strip_ansi(text: str) -> str:
+    return _ANSI_RE.sub("", text)
+
+
 def _create_session_state() -> RuntimeState:
     return {
         "evaluator": Evaluator(),
-        "history": [],  # newest entry first
+        "history": [],
+        "next_entry_id": 1,
+        "pending_guard": None,
     }
 
 
@@ -36,10 +48,10 @@ def _format_result(value: Any) -> str:
 
 def _history_rows(history: List[HistoryEntry]) -> List[List[str]]:
     rows: List[List[str]] = []
-    for idx, entry in enumerate(history, start=1):
+    for entry in history:
         rows.append(
             [
-                str(idx),
+                str(entry["entry_id"]),
                 entry["timestamp"],
                 entry["expression"],
                 entry["result"],
@@ -48,6 +60,33 @@ def _history_rows(history: List[HistoryEntry]) -> List[List[str]]:
             ]
         )
     return rows
+
+
+def _allocate_entry_id(runtime: RuntimeState) -> int:
+    entry_id = runtime.setdefault("next_entry_id", 1)
+    runtime["next_entry_id"] = entry_id + 1
+    return entry_id
+
+
+def _make_history_entry(
+    runtime: RuntimeState,
+    expression: str,
+    result: str,
+    status: str,
+    origin_label: str,
+    message: str,
+) -> HistoryEntry:
+    entry = {
+        "entry_id": _allocate_entry_id(runtime),
+        "timestamp": datetime.now().strftime("%H:%M:%S"),
+        "expression": expression,
+        "result": result,
+        "status": status,
+        "origin": origin_label,
+        "last_message": message,
+    }
+    runtime.setdefault("history", []).insert(0, entry)
+    return entry
 
 
 def _evaluate_expression(
@@ -62,70 +101,83 @@ def _evaluate_expression(
         return message, runtime, _history_rows(runtime["history"])
 
     evaluator: Evaluator = runtime.setdefault("evaluator", Evaluator())
-    timestamp = datetime.now().strftime("%H:%M:%S")
+
+    if origin == "manual":
+        status_label = "Успех"
+        origin_label = "Вручную"
+    else:
+        status_label = "Повтор"
+        origin_label = "Повтор"
 
     try:
         ast = api.parse(expr)
-        result_value = evaluator.eval(ast)
-        formatted_result = _format_result(result_value)
-        status = "Успешно" if origin == "manual" else "Воспроизведено"
-        entry: HistoryEntry = {
-            "expression": expr,
-            "result": formatted_result,
-            "status": status,
-            "origin": "Вручную" if origin == "manual" else "Воспроизведение",
-            "timestamp": timestamp,
-        }
-        runtime["history"].insert(0, entry)
+        if isinstance(ast, PlotCommand):
+            raise EvalError("Команды plot сейчас работают только в консольной версии.")
+        value = evaluator.eval(ast)
+        formatted_result = _format_result(value)
         message = f"`{expr}` -> **{formatted_result}**"
-    except Exception as exc:  # pragma: no cover - runtime display only
-        entry = {
-            "expression": expr,
-            "result": "-",
-            "status": f"Ошибка: {exc}",
-            "origin": "Вручную" if origin == "manual" else "Воспроизведение",
-            "timestamp": timestamp,
-        }
-        runtime["history"].insert(0, entry)
-        message = f"Ошибка при вычислении `{expr}`: {exc}"
-    return message, runtime, _history_rows(runtime["history"])
+        status = status_label
+    except (SmartCalcError, EvalError) as exc:
+        clean_message = _strip_ansi(str(exc))
+        formatted_result = "-"
+        message = f"Ошибка при вычислении `{expr}`: {clean_message}"
+        status = f"Ошибка: {clean_message}"
+    except Exception as exc:  # pragma: no cover
+        formatted_result = "-"
+        message = f"Непредвиденная ошибка при `{expr}`: {exc}"
+        status = f"Ошибка: {exc}"
+
+    _make_history_entry(runtime, expr, formatted_result, status, origin_label, message)
+    rows = _history_rows(runtime["history"])
+    return message, runtime, rows
 
 
 def _on_submit(expression: str, runtime: RuntimeState):
     message, runtime, rows = _evaluate_expression(expression, runtime, origin="manual")
+    runtime["pending_guard"] = None
     return message, runtime, rows, expression
 
 
 def _on_history_select(evt: gr.SelectData, runtime: RuntimeState):
     runtime = runtime or _create_session_state()
-    if not runtime["history"]:
-        info = "История пуста. Сначала вычислите выражение."
-        return info, runtime, _history_rows(runtime["history"]), ""
+    history = runtime["history"]
+    if not history:
+        info = "История пуста. Сначала выполните выражение."
+        return info, runtime, _history_rows(history), ""
 
     index = evt.index
     if isinstance(index, (tuple, list)):
-        row_idx = index[0]
-    else:
-        row_idx = index
+        index = index[0]
 
-    if row_idx is None:
-        info = "Выберите строку истории для воспроизведения."
-        return info, runtime, _history_rows(runtime["history"]), ""
+    if index is None:
+        info = "Строка в истории не выбрана."
+        return info, runtime, _history_rows(history), ""
 
     try:
-        entry = runtime["history"][int(row_idx)]
-    except (IndexError, ValueError, TypeError):
-        info = "Выберите корректную запись истории для воспроизведения."
-        return info, runtime, _history_rows(runtime["history"]), ""
+        entry = history[int(index)]
+    except (ValueError, TypeError, IndexError):
+        info = "Не удалось определить выбранную строку истории."
+        return info, runtime, _history_rows(history), ""
+
+    guard_id = runtime.get("pending_guard")
+    if guard_id == entry["entry_id"]:
+        runtime["pending_guard"] = None
+        message = entry.get(
+            "last_message",
+            f"`{entry['expression']}` -> **{entry['result']}**",
+        )
+        return message, runtime, _history_rows(history), entry["expression"]
 
     message, runtime, rows = _evaluate_expression(entry["expression"], runtime, origin="replay")
+    latest_entry = runtime["history"][0]
+    runtime["pending_guard"] = latest_entry["entry_id"]
     return message, runtime, rows, entry["expression"]
 
 
 def _on_clear(runtime: RuntimeState):
-    runtime = _create_session_state()
-    message = "История очищена и калькулятор сброшен."
-    return message, runtime, _history_rows(runtime["history"]), ""
+    message = "История очищена. Можно вводить новые выражения."
+    new_runtime = _create_session_state()
+    return message, new_runtime, _history_rows(new_runtime["history"]), ""
 
 
 def build_interface() -> gr.Blocks:
@@ -136,9 +188,7 @@ def build_interface() -> gr.Blocks:
 
         gr.Markdown(
             "# SmartCalc Web\n"
-            "Вычисляйте выражения SmartCalc прямо в браузере. "
-            "Присваивания и переменные сохраняются в памяти вашей сессии.\n"
-            "Нажмите на строку истории, чтобы воспроизвести её с текущим состоянием."
+            "Безопасно вычисляйте выражения, просматривайте историю и повторяйте вычисления."
         )
 
         with gr.Row():
@@ -158,7 +208,7 @@ def build_interface() -> gr.Blocks:
             row_count=(0, "dynamic"),
             col_count=(6, "fixed"),
             interactive=False,
-            label="История сессии (нажмите строку для воспроизведения)",
+            label="История вычислений (сначала последние записи)",
         )
 
         evaluate_btn.click(
@@ -188,4 +238,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

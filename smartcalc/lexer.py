@@ -1,7 +1,29 @@
 from __future__ import annotations
 from typing import List
-from .tokens import Token, K_NUM, K_IDENT, K_OP, K_LP, K_RP, K_COMMA, K_EOF, K_ASSIGN
+from .tokens import (
+    Token,
+    K_NUM,
+    K_IDENT,
+    K_OP,
+    K_LP,
+    K_RP,
+    K_COMMA,
+    K_EOF,
+    K_ASSIGN,
+    K_PLOT,
+    K_FROM,
+    K_TO,
+    K_TARGET,
+)
 from .errors import LexError, make_caret_message
+
+KEYWORDS = {
+    "plot": K_PLOT,
+    "from": K_FROM,
+    "to": K_TO,
+    "target": K_TARGET,
+}
+
 
 class Lexer:
     def __init__(self, text: str):
@@ -58,7 +80,7 @@ class Lexer:
                 val = float(cleaned)
             else:
                 if cleaned in ('', '.'):
-                    val = float(cleaned)  # вызовет ошибку
+                    val = float(cleaned)
                 else:
                     val = int(cleaned)
             return Token(K_NUM, val, pos)
@@ -68,7 +90,7 @@ class Lexer:
                 return Token(K_NUM, val, pos)
             except Exception:
                  raise LexError(make_caret_message(
-                    f"Некорректное число '{lexeme}'", self.text, pos
+                    f"Некорректная числовая запись '{lexeme}'", self.text, pos
                 ))
 
     def lex_ident(self) -> Token:
@@ -77,6 +99,9 @@ class Lexer:
         while not self.at_end() and (self.peek().isalnum() or self.peek() == '_'):
             self.advance()
         ident = self.text[start:self.i]
+        keyword_kind = KEYWORDS.get(ident.lower())
+        if keyword_kind:
+            return Token(keyword_kind, ident, start)
         return Token(K_IDENT, ident, start)
 
     def next_token(self) -> Token:
@@ -87,15 +112,12 @@ class Lexer:
         ch = self.peek()
         pos = self.i
 
-        # число: цифра или .цифра
         if ch.isdigit() or (ch == '.' and self.i + 1 < self.n and self.text[self.i+1].isdigit()):
             return self.lex_number()
 
-        # идентификатор
         if ch.isalpha() or ch == '_':
             return self.lex_ident()
 
-        # скобки и запятая
         if ch == '(':
             self.advance()
             return Token(K_LP, '(', pos)

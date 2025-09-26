@@ -1,9 +1,9 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 from typing import Union, Optional, Dict
 import math
 
 import numpy as np
-from .astnodes import AST, Num, Const, Call, Unary, Binary, Assign
+from .astnodes import AST, Num, Const, Call, Unary, Binary, Assign, PlotCommand
 from .errors import NameResolutionError, EvalError
 from .constants import DEFAULT_CONSTANTS, ROUND_CONST
 
@@ -16,6 +16,7 @@ SAFE_FUNCS = {
     'round': ((1, 2), round),
     'sin': (1, lambda x: round(np.sin(x), ROUND_CONST)),
     'cos': (1, lambda x: round(np.cos(x), ROUND_CONST)),
+    'tan': (1, lambda x: round(np.tan(x), ROUND_CONST)),
     'sqrt': (1, math.sqrt),
     'log': ((1, 2), lambda *xs: math.log(*xs)),
     'sinh': (1, lambda x: round(np.sinh(x), ROUND_CONST)),
@@ -38,6 +39,8 @@ class Evaluator:
         self.variables: Dict[str, Number] = {}
 
     def eval(self, node: AST) -> Number:
+        if isinstance(node, PlotCommand):
+            raise EvalError("Команды plot нельзя вычислять как числовые выражения.")
         if isinstance(node, Num):
             return node.value
         if isinstance(node, Assign):
@@ -104,8 +107,7 @@ class Evaluator:
                 ) from None
             if isinstance(result, (float, np.floating)) and math.isnan(float(result)):
                 raise EvalError(
-                    f"Вычисление функции '{node.func}' привело к неопределённому значению (позиция {node.pos})"
+                    f"Функция '{node.func}' вернула недопустимое значение (NaN) (позиция {node.pos})."
                 )
             return result
-        raise EvalError('Неизвестный узел AST')
-
+        raise EvalError('Неподдерживаемый тип узла AST.')
