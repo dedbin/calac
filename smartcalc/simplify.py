@@ -27,6 +27,7 @@ _SYMPY_FUNCTIONS: Dict[str, Callable[..., sp.Expr]] = {
     'asin': sp.asin,
     'acos': sp.acos,
     'atan': sp.atan,
+    'exp': sp.exp,
 }
 def _to_sympy(node: AST, evaluator: Evaluator) -> sp.Expr:
     if isinstance(node, Num):

@@ -83,3 +83,4 @@ temp/
 # Testing
 smartcalc/__pycache__/
 smartcalc/tests/__pycache__/
+plots/

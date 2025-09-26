@@ -9,7 +9,7 @@ from .constants import DEFAULT_CONSTANTS, ROUND_CONST
 
 Number = Union[int, float]
 
-SAFE_FUNCS = {
+SAFE_FUNCS = { # при добавлении новой функции в этот словарь, не забудьте добавить ее в _SYMPY_FUNCTIONS
     'abs': (1, abs),
     'max': ('2+', max),
     'min': ('2+', min),
@@ -25,6 +25,7 @@ SAFE_FUNCS = {
     'asin': (1, math.asin),
     'acos': (1, math.acos),
     'atan': (1, math.atan),
+    "exp": (1, lambda x: round(np.exp(x), ROUND_CONST)),
 }
 
 PROTECTED_NAMES = frozenset({name.lower() for name in DEFAULT_CONSTANTS} | set(SAFE_FUNCS.keys()))
