@@ -63,3 +63,9 @@ class PlotCommand(AST):
     domain_end: Optional[AST]
     target: Optional[PlotTarget]
     pos: int
+
+
+@dataclass
+class SimplifyCommand(AST):
+    expr: AST
+    pos: int

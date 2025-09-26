@@ -14,8 +14,9 @@ from .tokens import (
     K_FROM,
     K_TO,
     K_TARGET,
+    K_SIMPLIFY
 )
-from .astnodes import AST, Num, Const, Call, Unary, Binary, Assign, PlotCommand, PlotTarget
+from .astnodes import AST, Num, Const, Call, Unary, Binary, Assign, PlotCommand, PlotTarget, SimplifyCommand
 from .precedence import INFIX_BP, PREFIX_BP
 from .errors import ParseError, make_caret_message
 
@@ -64,6 +65,8 @@ class Parser:
         tok = self.peek()
         if tok.kind == K_PLOT:
             return self.parse_plot()
+        if tok.kind == K_SIMPLIFY:
+            return self.parse_simplify()
         return self.parse_assignment()
 
     def parse_assignment(self) -> AST:
@@ -117,6 +120,10 @@ class Parser:
             target=target,
             pos=plot_tok.pos,
         )
+    def parse_simplify(self) -> AST:
+        simplify_tok = self.expect(K_SIMPLIFY)
+        expr = self.parse_expr(0)
+        return SimplifyCommand(expr=expr, pos=simplify_tok.pos)
 
     def _has_assign_before_stop(self) -> bool:
         idx = self.i

@@ -3,7 +3,7 @@ from typing import Union, Optional, Dict
 import math
 
 import numpy as np
-from .astnodes import AST, Num, Const, Call, Unary, Binary, Assign, PlotCommand
+from .astnodes import AST, Num, Const, Call, Unary, Binary, Assign, PlotCommand, SimplifyCommand
 from .errors import NameResolutionError, EvalError
 from .constants import DEFAULT_CONSTANTS, ROUND_CONST
 
@@ -41,6 +41,8 @@ class Evaluator:
     def eval(self, node: AST) -> Number:
         if isinstance(node, PlotCommand):
             raise EvalError("Команды plot нельзя вычислять как числовые выражения.")
+        if isinstance(node, SimplifyCommand):
+            raise EvalError("Команды simplify нельзя вычислять как числовые выражения.")
         if isinstance(node, Num):
             return node.value
         if isinstance(node, Assign):

@@ -3,9 +3,10 @@ import sys
 from pathlib import Path
 
 from .api import parse
-from .astnodes import PlotCommand
+from .astnodes import PlotCommand, SimplifyCommand
 from .evaluator import Evaluator
 from .errors import SmartCalcError
+from .simplify import execute_simplify
 from .plotting import execute_plot
 
 try:
@@ -56,6 +57,9 @@ def repl() -> None:
         except EOFError:
             print()
             break
+        except KeyboardInterrupt:
+            print('\n' + BYE_MESSAGE)
+            exit(0)
         if not s:
             print(BYE_MESSAGE)
             break
@@ -64,6 +68,10 @@ def repl() -> None:
             if isinstance(ast, PlotCommand):
                 result = execute_plot(ast, ev, show=True)
                 print(result.message)
+                continue
+            if isinstance(ast, SimplifyCommand):
+                simplified = execute_simplify(ast, ev)
+                print(simplified)
                 continue
             val = ev.eval(ast)
             if isinstance(val, float) and val.is_integer():
@@ -91,6 +99,10 @@ def run_file(path: str) -> int:
                 if isinstance(ast, PlotCommand):
                     result = execute_plot(ast, ev, show=False, output_dir=output_dir)
                     print(result.message)
+                    continue
+                if isinstance(ast, SimplifyCommand):
+                    simplified = execute_simplify(ast, ev)
+                    print(simplified)
                     continue
                 val = ev.eval(ast)
                 if isinstance(val, float) and val.is_integer():

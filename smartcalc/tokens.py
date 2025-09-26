@@ -13,6 +13,7 @@ K_PLOT  = 'PLOT'
 K_FROM  = 'FROM'
 K_TO    = 'TO'
 K_TARGET = 'TARGET'
+K_SIMPLIFY = 'SIMPLIFY'
 
 @dataclass(frozen=True)
 class Token:

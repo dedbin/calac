@@ -14,6 +14,7 @@ from .tokens import (
     K_FROM,
     K_TO,
     K_TARGET,
+    K_SIMPLIFY,
 )
 from .errors import LexError, make_caret_message
 
@@ -22,6 +23,7 @@ KEYWORDS = {
     "from": K_FROM,
     "to": K_TO,
     "target": K_TARGET,
+    "simplify": K_SIMPLIFY
 }
 
 

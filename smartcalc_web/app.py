@@ -9,9 +9,11 @@ from typing import Any, Dict, List, Tuple
 import gradio as gr
 
 from smartcalc import api
-from smartcalc.astnodes import PlotCommand
+from smartcalc.astnodes import PlotCommand, SimplifyCommand
 from smartcalc.evaluator import Evaluator
 from smartcalc.errors import EvalError, SmartCalcError
+from smartcalc.simplify import execute_simplify
+
 
 HistoryEntry = Dict[str, Any]
 RuntimeState = Dict[str, Any]
@@ -113,9 +115,14 @@ def _evaluate_expression(
         ast = api.parse(expr)
         if isinstance(ast, PlotCommand):
             raise EvalError("Команды plot сейчас работают только в консольной версии.")
-        value = evaluator.eval(ast)
-        formatted_result = _format_result(value)
-        message = f"`{expr}` -> **{formatted_result}**"
+        if isinstance(ast, SimplifyCommand):
+            simplified = execute_simplify(ast, evaluator)
+            formatted_result = simplified
+            message = f"`{expr}` -> **{simplified}**"
+        else:
+            value = evaluator.eval(ast)
+            formatted_result = _format_result(value)
+            message = f"`{expr}` -> **{formatted_result}**"
         status = status_label
     except (SmartCalcError, EvalError) as exc:
         clean_message = _strip_ansi(str(exc))
